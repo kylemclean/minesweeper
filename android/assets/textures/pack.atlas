@@ -1,0 +1,118 @@
+
+pack.png
+size: 1024,512
+format: RGBA8888
+filter: Nearest,Nearest
+repeat: none
+cell1
+  rotate: false
+  xy: 724, 392
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell2
+  rotate: false
+  xy: 2, 68
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell3
+  rotate: false
+  xy: 724, 326
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell4
+  rotate: false
+  xy: 790, 392
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell5
+  rotate: false
+  xy: 2, 2
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell6
+  rotate: false
+  xy: 68, 68
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell7
+  rotate: false
+  xy: 724, 260
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell8
+  rotate: false
+  xy: 790, 326
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_empty
+  rotate: false
+  xy: 856, 392
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_flag_down
+  rotate: false
+  xy: 68, 2
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_flag_up
+  rotate: false
+  xy: 134, 68
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_mine
+  rotate: false
+  xy: 724, 194
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_normal_down
+  rotate: false
+  xy: 790, 260
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_normal_up
+  rotate: false
+  xy: 856, 326
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+lose
+  rotate: false
+  xy: 2, 296
+  size: 720, 160
+  orig: 720, 160
+  offset: 0, 0
+  index: -1
+win
+  rotate: false
+  xy: 2, 134
+  size: 720, 160
+  orig: 720, 160
+  offset: 0, 0
+  index: -1
