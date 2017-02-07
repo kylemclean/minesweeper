@@ -18,7 +18,7 @@ public class Minesweeper extends Game {
 	public AssetManager assets;
 
 	public SpriteBatch batch;
-	public OrthographicCamera camera;
+	public OrthographicCamera gameCamera, fixedCamera;
 	public ScreenViewport viewport;
 	public ShapeRenderer shapeRenderer;
 
@@ -34,9 +34,11 @@ public class Minesweeper extends Game {
 
 		// Initialize SpriteBatch, ScreenViewport, and OrthographicCamera.
 		batch = new SpriteBatch();
-		camera = new OrthographicCamera();
-		camera.setToOrtho(false, 1280, 720);
-		viewport = new ScreenViewport(camera);
+		gameCamera = new OrthographicCamera();
+		gameCamera.setToOrtho(false, 1280, 720);
+		fixedCamera = new OrthographicCamera();
+		fixedCamera.setToOrtho(false, 1280, 720);
+		viewport = new ScreenViewport(gameCamera);
 		// Initialize ShapeRenderer
 		shapeRenderer = new ShapeRenderer();
 		setScreen(new MenuScreen(this));

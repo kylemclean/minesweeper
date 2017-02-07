@@ -4,11 +4,14 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureAtlas;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.math.Vector2;
@@ -26,13 +29,14 @@ public class GameScreen implements Screen, InputProcessor {
 
     private Minesweeper game;
     private SpriteBatch batch;
-    private OrthographicCamera camera;
+    private OrthographicCamera gameCamera, fixedCamera;
+    private ShapeRenderer shapeRenderer;
 
     private TextureAtlas textures;
     private BitmapFont font;
 
-    private Vector3 cameraTargetPosition;
-    private float cameraTargetZoom;
+    private Vector3 gameCameraTargetPosition;
+    private float gameCameraTargetZoom;
 
     private Vector3 touchPos, screenTouchDownPos;
     private boolean panningCamera;
@@ -52,6 +56,8 @@ public class GameScreen implements Screen, InputProcessor {
     private GameState gameStateBeforePause;
     private float gameTime;
 
+    private GlyphLayout minesDisplay, timeDisplay;
+
     /**
      * Initialize the GameScreen.
      *
@@ -63,12 +69,14 @@ public class GameScreen implements Screen, InputProcessor {
     public GameScreen(Minesweeper game, int boardWidth, int boardHeight, int mines) {
         this.game = game;
         batch = this.game.batch;
-        camera = this.game.camera;
+        gameCamera = this.game.gameCamera;
+        fixedCamera = this.game.fixedCamera;
+        shapeRenderer = this.game.shapeRenderer;
 
         textures = game.assets.get("textures/pack.atlas", TextureAtlas.class);
         font = game.assets.get("ui/arial-32.fnt", BitmapFont.class);
 
-        cameraTargetPosition = new Vector3();
+        gameCameraTargetPosition = new Vector3();
 
         Gdx.input.setInputProcessor(this);
         touchPos = new Vector3();
@@ -98,12 +106,22 @@ public class GameScreen implements Screen, InputProcessor {
         // Center rectangle on board.
         zoomRectangle.x = -((zoomRectangle.width - (boardWidth * cellSize / 2)) / 2);
         zoomRectangle.y = -((zoomRectangle.height - (boardHeight * cellSize / 2)) / 2);
-        cameraTargetPosition.set(boardWidth * cellSize / 2, boardHeight * cellSize / 2, 0);
-        cameraTargetZoom = zoomRectangle.width / 1280;
-        defaultZoom = cameraTargetZoom;
+        gameCameraTargetPosition.set(boardWidth * cellSize / 2, boardHeight * cellSize / 2, 0);
+        // Have the camera snap to the target position at first
+        gameCamera.position.set(gameCameraTargetPosition.cpy());
+        fixedCamera.position.set(gameCamera.position.cpy());
+        // Zoom in at first
+        gameCamera.zoom = 0.5f;
+        gameCameraTargetZoom = zoomRectangle.width / 1280;
+        defaultZoom = gameCameraTargetZoom;
+        fixedCamera.zoom = defaultZoom;
 
         gameState = GameState.NOT_STARTED;
         gameTime = 0;
+
+        // Set to null to ensure it will not be read before text is rendered for the first time.
+        minesDisplay = null;
+        timeDisplay = null;
     }
 
     /**
@@ -238,6 +256,16 @@ public class GameScreen implements Screen, InputProcessor {
      */
     private void loseGame() {
         gameState = GameState.LOST;
+        for (int y = 0; y < boardHeight; y++) {
+            for (int x = 0; x < boardWidth; x++) {
+                if (board[y][x].isMine && !board[y][x].flagged) {
+                    board[y][x].texture = textures.findRegion("cell_mine");
+                }
+                if (!board[y][x].isMine && board[y][x].flagged) {
+                    board[y][x].texture = textures.findRegion("cell_flag_wrong");
+                }
+            }
+        }
     }
 
     /**
@@ -253,7 +281,7 @@ public class GameScreen implements Screen, InputProcessor {
 
     @Override
     public void render(float delta) {
-        Gdx.gl20.glClearColor(0, 0, 0, 1);
+        Gdx.gl20.glClearColor(0.2f, 0.2f, 0.2f, 1);
         Gdx.gl20.glClear(GL20.GL_COLOR_BUFFER_BIT);
 
         if (gameState == GameState.PLAYING) {
@@ -262,22 +290,44 @@ public class GameScreen implements Screen, InputProcessor {
 
         interpolateCamera(delta);
 
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
+        gameCamera.update();
+        fixedCamera.update();
+
+        batch.setProjectionMatrix(gameCamera.combined);
         batch.begin();
         for (int y = 0; y < boardHeight; y++) {
             for (int x = 0; x < boardWidth; x++) {
                 batch.draw(board[y][x].texture, x * cellSize, y * cellSize, cellSize, cellSize);
             }
         }
+        batch.end();
+
+        // Draw rectangles behind the mines counter and timer
+        if (minesDisplay != null && timeDisplay != null) {
+            Gdx.gl20.glEnable(GL20.GL_BLEND);
+            shapeRenderer.setProjectionMatrix(fixedCamera.combined);
+            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.75f);
+            shapeRenderer.rect( boardRectangle.x,
+                                boardRectangle.y + boardRectangle.height + 12,
+                                -minesDisplay.width - 8, -minesDisplay.height - 24);
+            shapeRenderer.rect( boardRectangle.x + boardRectangle.width,
+                                boardRectangle.y + boardRectangle.height + 12,
+                                minesDisplay.width + 12, -minesDisplay.height - 24);
+            shapeRenderer.end();
+            Gdx.gl20.glDisable(GL20.GL_BLEND);
+        }
+
+        batch.setProjectionMatrix(fixedCamera.combined);
+        batch.begin();
         // Draw mines remaining
-        font.draw(batch,
+        minesDisplay = font.draw(batch,
                 ((mines - cellsFlagged) < 100 ? "0" : "") +
                         ((mines - cellsFlagged) < 10 ? "0" : "") + (mines - cellsFlagged),
                 boardRectangle.x - 8, boardRectangle.y + boardRectangle.height,
                 0, Align.right, false);
         // Draw time elapsed
-        font.draw(batch,
+        timeDisplay = font.draw(batch,
                 (int) gameTime / 60 + ":" + ((int) gameTime % 60 < 10 ? "0" : "") + (int) gameTime % 60,
                 boardRectangle.x + boardRectangle.width + 8,
                 boardRectangle.y + boardRectangle.height);
@@ -292,30 +342,45 @@ public class GameScreen implements Screen, InputProcessor {
                         boardRectangle.width / 2 - textures.findRegion("lose").originalWidth / 2,
                         boardRectangle.height / 2 - textures.findRegion("lose").originalHeight / 2);
             }
-            font.draw(
-                    batch, "Press SPACE to play again",
-                    boardRectangle.width / 2, 120, 0, Align.center, false);
+            for (int i = 0; i < 2; i++) {
+                if (i == 0) {
+                    font.setColor(Color.BLACK);
+                } else {
+                    font.setColor(Color.WHITE);
+                }
+                    font.draw(
+                            batch, "Press SPACE to play again\nPress ESC to change settings",
+                            boardRectangle.width / 2 + i*-2, 120 + i*2, 0, Align.center, false);
+            }
         }
         batch.end();
     }
 
     /**
      * Interpolate the camera's position and zoom to a target position and zoom.
-     * (cameraTargetPosition and cameraTargetZoom)
+     * (gameCameraTargetPosition and gameCameraTargetZoom)
      *
      * @param delta The change in time in seconds since the last frame.
      */
     private void interpolateCamera(float delta) {
-        camera.position.x += (cameraTargetPosition.x - camera.position.x) * 10 * delta;
-        camera.position.y += (cameraTargetPosition.y - camera.position.y) * 10 * delta;
-        camera.zoom += (cameraTargetZoom - camera.zoom) * 10 * delta;
+        gameCamera.position.x += (gameCameraTargetPosition.x - gameCamera.position.x) * 10 * delta;
+        gameCamera.position.y += (gameCameraTargetPosition.y - gameCamera.position.y) * 10 * delta;
+        gameCamera.zoom += (gameCameraTargetZoom - gameCamera.zoom) * 10 * delta;
+    }
+
+    /**
+     * Quit the game and return the player to the menu.
+     */
+    private void returnToMenu() {
+        dispose();
+        game.setScreen(new MenuScreen(game));
     }
 
     @Override
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
         touchPos.set(screenX, screenY, 0);
         screenTouchDownPos = touchPos.cpy();
-        camera.unproject(touchPos);
+        gameCamera.unproject(touchPos);
 
         if (gameState == GameState.PLAYING || gameState == GameState.NOT_STARTED) {
             if (boardRectangle.contains(touchPos.x, touchPos.y)) {
@@ -340,7 +405,7 @@ public class GameScreen implements Screen, InputProcessor {
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         boolean returnTrue = false;
         touchPos.set(screenX, screenY, 0);
-        camera.unproject(touchPos);
+        gameCamera.unproject(touchPos);
 
         if (gameState == GameState.PLAYING || gameState == GameState.NOT_STARTED) {
             int cellX = (int) touchPos.x / cellSize;
@@ -377,15 +442,15 @@ public class GameScreen implements Screen, InputProcessor {
 
     @Override
     public boolean touchDragged(int screenX, int screenY, int pointer) {
-        if (cameraTargetZoom < defaultZoom - 0.1f && (
+        if (gameCameraTargetZoom < defaultZoom - 0.1f && (
                 Math.abs(screenTouchDownPos.x - screenX) >= 20 ||
                         Math.abs(screenTouchDownPos.y - screenY) >= 20 || panningCamera)) {
             panningCamera = true;
-            camera.translate((screenTouchDownPos.x - screenX) / 4f,
+            gameCamera.translate((screenTouchDownPos.x - screenX) / 4f,
                     -(screenTouchDownPos.y - screenY) / 4f);
-            cameraTargetPosition.set(camera.position.cpy());
-            cameraTargetPosition.x = MathUtils.clamp(cameraTargetPosition.x, boardRectangle.x, boardRectangle.x + boardRectangle.width);
-            cameraTargetPosition.y = MathUtils.clamp(cameraTargetPosition.y, boardRectangle.y, boardRectangle.y + boardRectangle.height);
+            gameCameraTargetPosition.set(gameCamera.position.cpy());
+            gameCameraTargetPosition.x = MathUtils.clamp(gameCameraTargetPosition.x, boardRectangle.x, boardRectangle.x + boardRectangle.width);
+            gameCameraTargetPosition.y = MathUtils.clamp(gameCameraTargetPosition.y, boardRectangle.y, boardRectangle.y + boardRectangle.height);
             screenTouchDownPos.set(screenX, screenY, 0);
             return true;
         }
@@ -409,6 +474,9 @@ public class GameScreen implements Screen, InputProcessor {
                         && keycode == Input.Keys.SPACE) {
             resetGame();
         }
+        if (keycode == Input.Keys.ESCAPE) {
+            returnToMenu();
+        }
         return false;
     }
 
@@ -419,10 +487,10 @@ public class GameScreen implements Screen, InputProcessor {
 
     @Override
     public boolean scrolled(int amount) {
-        cameraTargetZoom += amount / 20F;
-        cameraTargetZoom = MathUtils.clamp(cameraTargetZoom, 0.2f, defaultZoom);
-        if (cameraTargetZoom >= defaultZoom - 0.1f) {
-            cameraTargetPosition.set(boardWidth * cellSize / 2, boardHeight * cellSize / 2, 0);
+        gameCameraTargetZoom += amount / 20F;
+        gameCameraTargetZoom = MathUtils.clamp(gameCameraTargetZoom, 0.2f, defaultZoom);
+        if (gameCameraTargetZoom >= defaultZoom - 0.1f) {
+            gameCameraTargetPosition.set(boardWidth * cellSize / 2, boardHeight * cellSize / 2, 0);
         }
         return true;
     }

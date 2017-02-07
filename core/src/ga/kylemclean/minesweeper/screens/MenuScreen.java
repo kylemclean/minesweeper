@@ -21,9 +21,17 @@ public class MenuScreen implements Screen {
     private Skin skin;
     private Table table;
 
-    private Label boardWidthLabel, boardHeightLabel, minesLabel;
+    private Label widthNameLabel, heightNameLabel, minesNameLabel;
+    private Label widthValueLabel, heightValueLabel, minesValueLabel;
     private Slider boardWidthSlider, boardHeightSlider, minesSlider;
     private TextButton playButton;
+
+    private final int MIN_BOARD_WIDTH = 9;
+    private final int MAX_BOARD_WIDTH = 30;
+    private final int MIN_BOARD_HEIGHT = 9;
+    private final int MAX_BOARD_HEIGHT = 16;
+    private final int MIN_MINES = 10;
+    private final int MAX_MINES = 667; // Hard limit, actual limit calculated in getMaxMines()
 
     public MenuScreen(ga.kylemclean.minesweeper.Minesweeper game) {
         this.game = game;
@@ -40,63 +48,76 @@ public class MenuScreen implements Screen {
         skin = game.assets.get("ui/uiskin.json", Skin.class);
         table = new Table(skin);
 
-        boardWidthSlider = new Slider(9, 30, 1, false, skin);
-        boardWidthSlider.setName("width");
-        boardHeightSlider = new Slider(9, 24, 1, false, skin);
-        boardHeightSlider.setName("height");
-        minesSlider = new Slider(10, getMaxMines(9, 9), 1, false, skin);
-        minesSlider.setValue(10);
-        minesSlider.setName("mines");
+        boardWidthSlider = new Slider(MIN_BOARD_WIDTH, MAX_BOARD_WIDTH, 1, false, skin);
+        boardHeightSlider = new Slider(MIN_BOARD_HEIGHT, MAX_BOARD_HEIGHT, 1, false, skin);
+        minesSlider = new Slider(
+                MIN_MINES, getMaxMines(MIN_BOARD_WIDTH, MIN_BOARD_HEIGHT), 1, false, skin);
         playButton = new TextButton("Play", skin);
         playButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                game.setScreen(new GameScreen(game,
+                startGame(
                         (int) boardWidthSlider.getValue(),
                         (int) boardHeightSlider.getValue(),
-                        (int) minesSlider.getValue()));
+                        (int) minesSlider.getValue());
             }
         });
-        boardWidthLabel = new Label("Width: " + (int) boardWidthSlider.getValue(), skin);
-        boardHeightLabel = new Label("Height: " + (int) boardHeightSlider.getValue(), skin);
-        minesLabel = new Label("Mines: " + (int) minesSlider.getValue(), skin);
+        widthNameLabel = new Label("Width: ", skin);
+        heightNameLabel = new Label("Height: ", skin);
+        minesNameLabel = new Label("Mines: ", skin);
+        widthValueLabel = new Label("" + (int) boardWidthSlider.getValue(), skin);
+        heightValueLabel = new Label("" + (int) boardHeightSlider.getValue(), skin);
+        minesValueLabel = new Label("" + (int) minesSlider.getValue(), skin);
 
-        table.add(boardWidthLabel);
+        table.add(widthNameLabel).left();
+        table.add(widthValueLabel);
         table.add(boardWidthSlider).width(400);
         table.row();
-        table.add(boardHeightLabel);
+        table.add(heightNameLabel).left();
+        table.add(heightValueLabel);
         table.add(boardHeightSlider).width(400);
         table.row();
-        table.add(minesLabel);
+        table.add(minesNameLabel).left();
+        table.add(minesValueLabel).width(80);
         table.add(minesSlider).width(400);
         table.row();
         table.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 // Update labels for sliders.
-                boardWidthLabel.setText("Width: " + (int) boardWidthSlider.getValue());
-                boardHeightLabel.setText("Height: " + (int) boardHeightSlider.getValue());
-                minesLabel.setText("Mines: " + (int) minesSlider.getValue());
+                widthValueLabel.setText("" + (int) boardWidthSlider.getValue());
+                heightValueLabel.setText("" + (int) boardHeightSlider.getValue());
+                minesValueLabel.setText("" + (int) minesSlider.getValue());
                 // Set the max value for the mines slider.
                 float maxMines = getMaxMines((int) (boardWidthSlider.getValue()), (int) (boardHeightSlider.getValue()));
                 minesSlider.setRange(10, maxMines);
             }
         });
-        table.add(playButton).colspan(2);
+        table.add(playButton).colspan(3);
 
         table.setFillParent(true);
         stage.addActor(table);
-
-        //stage.setDebugAll(true);
-
     }
 
     /**
      * Get the maximum number of mines based on the boardWidth and boardHeight.
+     * @param boardWidth The width of the board in cells.
+     * @param boardHeight The height of the board in cells.
      */
     private int getMaxMines(int boardWidth, int boardHeight) {
         double n = (Math.ceil(Math.sqrt(boardHeight * boardWidth)) - 1);
-        return (int) MathUtils.clamp(n * n, 64, 667);
+        return (int) MathUtils.clamp(n * n, 64, MAX_MINES);
+    }
+
+    /**
+     * Start a game with the specified properties.
+     * @param boardWidth The width of the board in cells.
+     * @param boardHeight The height of the board in cells.
+     * @param mines The number of mines on the board to be generated.
+     */
+    private void startGame(int boardWidth, int boardHeight, int mines) {
+        dispose();
+        game.setScreen(new GameScreen(game, boardWidth, boardHeight, mines));
     }
 
     @Override

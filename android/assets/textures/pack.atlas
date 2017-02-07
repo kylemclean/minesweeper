@@ -1,118 +1,125 @@
 
 pack.png
-size: 1024,512
+size: 1024,256
 format: RGBA8888
 filter: Nearest,Nearest
 repeat: none
 cell1
   rotate: false
-  xy: 724, 392
+  xy: 544, 180
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell2
   rotate: false
-  xy: 2, 68
+  xy: 544, 114
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell3
   rotate: false
-  xy: 724, 326
+  xy: 610, 180
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell4
   rotate: false
-  xy: 790, 392
+  xy: 544, 48
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell5
   rotate: false
-  xy: 2, 2
+  xy: 610, 114
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell6
   rotate: false
-  xy: 68, 68
+  xy: 676, 180
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell7
   rotate: false
-  xy: 724, 260
+  xy: 610, 48
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell8
   rotate: false
-  xy: 790, 326
+  xy: 676, 114
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell_empty
   rotate: false
-  xy: 856, 392
+  xy: 742, 180
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell_flag_down
   rotate: false
-  xy: 68, 2
+  xy: 676, 48
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell_flag_up
   rotate: false
-  xy: 134, 68
+  xy: 742, 114
+  size: 64, 64
+  orig: 64, 64
+  offset: 0, 0
+  index: -1
+cell_flag_wrong
+  rotate: false
+  xy: 808, 180
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell_mine
   rotate: false
-  xy: 724, 194
+  xy: 742, 48
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell_normal_down
   rotate: false
-  xy: 790, 260
+  xy: 808, 114
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 cell_normal_up
   rotate: false
-  xy: 856, 326
+  xy: 874, 180
   size: 64, 64
   orig: 64, 64
   offset: 0, 0
   index: -1
 lose
   rotate: false
-  xy: 2, 296
-  size: 720, 160
-  orig: 720, 160
+  xy: 2, 124
+  size: 540, 120
+  orig: 540, 120
   offset: 0, 0
   index: -1
 win
   rotate: false
-  xy: 2, 134
-  size: 720, 160
-  orig: 720, 160
+  xy: 2, 2
+  size: 540, 120
+  orig: 540, 120
   offset: 0, 0
   index: -1
