@@ -1,6 +1,6 @@
 # Minesweeper
 
-###### Clone of Minesweeper in libGDX
+### Clone of Minesweeper in libGDX
 
 ---
 
