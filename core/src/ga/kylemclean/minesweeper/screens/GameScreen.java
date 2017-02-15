@@ -32,7 +32,7 @@ public class GameScreen implements Screen, InputProcessor {
     private OrthographicCamera gameCamera, fixedCamera;
     private ShapeRenderer shapeRenderer;
 
-    private TextureAtlas textures;
+    private TextureAtlas cellTextures, uiTextures;
     private BitmapFont font;
 
     private Vector3 gameCameraTargetPosition;
@@ -73,7 +73,8 @@ public class GameScreen implements Screen, InputProcessor {
         fixedCamera = this.game.fixedCamera;
         shapeRenderer = this.game.shapeRenderer;
 
-        textures = game.assets.get("textures/pack.atlas", TextureAtlas.class);
+        cellTextures = game.assets.get("textures/cells/pack.atlas", TextureAtlas.class);
+        uiTextures = game.assets.get("textures/ui/pack.atlas", TextureAtlas.class);
         font = game.assets.get("ui/arial-32.fnt", BitmapFont.class);
 
         gameCameraTargetPosition = new Vector3();
@@ -86,7 +87,7 @@ public class GameScreen implements Screen, InputProcessor {
         this.boardHeight = boardHeight;
         this.mines = mines;
 
-        board = new Cell[this.boardHeight][this.boardWidth];
+        board = new Cell[this.boardWidth][this.boardHeight];
         createCells(this.boardWidth, this.boardHeight);
         pressingCell = new Vector2(-1, -1);
         cellsFlagged = 0;
@@ -133,8 +134,8 @@ public class GameScreen implements Screen, InputProcessor {
     private void createCells(int boardWidth, int boardHeight) {
         for (int y = 0; y < boardHeight; y++) {
             for (int x = 0; x < boardWidth; x++) {
-                board[y][x] = new Cell(
-                        textures.findRegion("cell_normal_up"));
+                board[x][y] = new Cell(
+                        cellTextures.findRegion("cell_normal_up"));
             }
         }
     }
@@ -149,14 +150,14 @@ public class GameScreen implements Screen, InputProcessor {
      */
     private void generateMines(int amount, int initialX, int initialY) {
         for (int m = 0; m < amount; ) {
-            int randY = MathUtils.random(boardHeight - 1);
             int randX = MathUtils.random(boardWidth - 1);
-            if (!board[randY][randX].isMine && !(
+            int randY = MathUtils.random(boardHeight - 1);
+            if (!board[randX][randY].isMine && !(
                     (randX >= initialX - 1 && randX <= initialX + 1) &&
                             (randY >= initialY - 1 && randY <= initialY + 1))) {
                 // Set as a mine as long as it isn't already a mine and it is
                 // not in a 3x3 space around the cell the user clicked.
-                board[randY][randX].isMine = true;
+                board[randX][randY].isMine = true;
                 m++;
             }
         }
@@ -168,19 +169,19 @@ public class GameScreen implements Screen, InputProcessor {
     private void generateCellLabels() {
         for (int y = 0; y < boardHeight; y++) {
             for (int x = 0; x < boardWidth; x++) {
-                if (!board[y][x].isMine) {
+                if (!board[x][y].isMine) {
                     int surroundingMines = 0;
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dx = -1; dx <= 1; dx++) {
                             if (x + dx >= 0 && y + dy >= 0 &&
                                     x + dx < boardWidth && y + dy < boardHeight) {
-                                if (board[y + dy][x + dx].isMine) {
+                                if (board[x + dx][y + dy].isMine) {
                                     surroundingMines++;
                                 }
                             }
                         }
                     }
-                    board[y][x].surroundingMines = surroundingMines;
+                    board[x][y].surroundingMines = surroundingMines;
                 }
             }
         }
@@ -194,20 +195,20 @@ public class GameScreen implements Screen, InputProcessor {
      * @param y The y-coordinate of the cell to open.
      */
     private void openCell(int x, int y) {
-        if (!board[y][x].opened && !board[y][x].flagged) {
+        if (!board[x][y].opened && !board[x][y].flagged) {
             // If the cell is not a mine or flagged
-            if (board[y][x].open()) {
-                if (board[y][x].surroundingMines > 0) {
-                    board[y][x].texture = textures
-                            .findRegion("cell" + board[y][x].surroundingMines);
+            if (board[x][y].open()) {
+                if (board[x][y].surroundingMines > 0) {
+                    board[x][y].texture = cellTextures
+                            .findRegion("cell" + board[x][y].surroundingMines);
                 } else {
-                    // No surrounding mines
-                    board[y][x].texture = textures
+                    // There are no surrounding mines
+                    board[x][y].texture = cellTextures
                             .findRegion("cell_empty");
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dx = -1; dx <= 1; dx++) {
                             if (x + dx >= 0 && y + dy >= 0 &&
-                                    x + dx < boardWidth && y + dy < boardHeight) {
+                                x + dx < boardWidth && y + dy < boardHeight) {
                                 openCell(x + dx, y + dy);
                             }
                         }
@@ -218,7 +219,7 @@ public class GameScreen implements Screen, InputProcessor {
                     winGame();
                 }
             } else {
-                board[y][x].texture = textures.findRegion("cell_mine");
+                board[x][y].texture = cellTextures.findRegion("cell_mine");
                 loseGame();
             }
         }
@@ -231,14 +232,14 @@ public class GameScreen implements Screen, InputProcessor {
      * @param y The y-coordinate of the cell to (un)flag.
      */
     private void toggleFlagCell(int x, int y) {
-        if (!board[y][x].opened) {
-            if (!board[y][x].flagged) {
-                board[y][x].flagged = true;
-                board[y][x].texture = textures.findRegion("cell_flag_up");
+        if (!board[x][y].opened) {
+            if (!board[x][y].flagged) {
+                board[x][y].flagged = true;
+                board[x][y].texture = cellTextures.findRegion("cell_flag_up");
                 cellsFlagged++;
             } else {
-                board[y][x].flagged = false;
-                board[y][x].texture = textures.findRegion("cell_normal_up");
+                board[x][y].flagged = false;
+                board[x][y].texture = cellTextures.findRegion("cell_normal_up");
                 cellsFlagged--;
             }
         }
@@ -256,13 +257,14 @@ public class GameScreen implements Screen, InputProcessor {
      */
     private void loseGame() {
         gameState = GameState.LOST;
+        // Show all mines on the board
         for (int y = 0; y < boardHeight; y++) {
             for (int x = 0; x < boardWidth; x++) {
-                if (board[y][x].isMine && !board[y][x].flagged) {
-                    board[y][x].texture = textures.findRegion("cell_mine");
+                if (board[x][y].isMine && !board[x][y].flagged) {
+                    board[x][y].texture = cellTextures.findRegion("cell_mine");
                 }
-                if (!board[y][x].isMine && board[y][x].flagged) {
-                    board[y][x].texture = textures.findRegion("cell_flag_wrong");
+                if (!board[x][y].isMine && board[x][y].flagged) {
+                    board[x][y].texture = cellTextures.findRegion("cell_flag_wrong");
                 }
             }
         }
@@ -297,7 +299,7 @@ public class GameScreen implements Screen, InputProcessor {
         batch.begin();
         for (int y = 0; y < boardHeight; y++) {
             for (int x = 0; x < boardWidth; x++) {
-                batch.draw(board[y][x].texture, x * cellSize, y * cellSize, cellSize, cellSize);
+                batch.draw(board[x][y].texture, x * cellSize, y * cellSize, cellSize, cellSize);
             }
         }
         batch.end();
@@ -334,13 +336,13 @@ public class GameScreen implements Screen, InputProcessor {
         // Draw title if game is over
         if (gameState == GameState.WON || gameState == GameState.LOST) {
             if (gameState == GameState.WON) {
-                batch.draw(textures.findRegion("win"),
-                        boardRectangle.width / 2 - textures.findRegion("win").originalWidth / 2,
-                        boardRectangle.height / 2 - textures.findRegion("win").originalHeight / 2);
+                batch.draw(uiTextures.findRegion("win"),
+                        boardRectangle.width / 2 - uiTextures.findRegion("win").originalWidth / 2,
+                        boardRectangle.height / 2 - uiTextures.findRegion("win").originalHeight / 2);
             } else if (gameState == GameState.LOST) {
-                batch.draw(textures.findRegion("lose"),
-                        boardRectangle.width / 2 - textures.findRegion("lose").originalWidth / 2,
-                        boardRectangle.height / 2 - textures.findRegion("lose").originalHeight / 2);
+                batch.draw(uiTextures.findRegion("lose"),
+                        boardRectangle.width / 2 - uiTextures.findRegion("lose").originalWidth / 2,
+                        boardRectangle.height / 2 - uiTextures.findRegion("lose").originalHeight / 2);
             }
             for (int i = 0; i < 2; i++) {
                 if (i == 0) {
@@ -387,12 +389,12 @@ public class GameScreen implements Screen, InputProcessor {
                 int cellX = (int) touchPos.x / cellSize;
                 int cellY = (int) touchPos.y / cellSize;
 
-                if (!board[cellY][cellX].opened) {
+                if (!board[cellX][cellY].opened) {
                     pressingCell.set(cellX, cellY);
-                    if (!board[cellY][cellX].flagged) {
-                        board[cellY][cellX].texture = textures.findRegion("cell_normal_down");
+                    if (!board[cellX][cellY].flagged) {
+                        board[cellX][cellY].texture = cellTextures.findRegion("cell_normal_down");
                     } else {
-                        board[cellY][cellX].texture = textures.findRegion("cell_flag_down");
+                        board[cellX][cellY].texture = cellTextures.findRegion("cell_flag_down");
                     }
                 }
                 return true;
@@ -417,10 +419,10 @@ public class GameScreen implements Screen, InputProcessor {
                         generateCellLabels();
                         gameState = GameState.PLAYING;
                     }
-                    if (!board[cellY][cellX].flagged) {
+                    if (!board[cellX][cellY].flagged) {
                         openCell(cellX, cellY);
                     } else {
-                        board[cellY][cellX].texture = textures.findRegion("cell_flag_up");
+                        board[cellX][cellY].texture = cellTextures.findRegion("cell_flag_up");
                     }
                 } else if (button == 1) {
                     toggleFlagCell(cellX, cellY);
@@ -428,10 +430,10 @@ public class GameScreen implements Screen, InputProcessor {
                 returnTrue = true;
             } else {
                 if (pressingCell.x != -1 && pressingCell.y != -1) {
-                    board[(int) pressingCell.y][(int) pressingCell.x].texture =
-                            !board[(int) pressingCell.y][(int) pressingCell.x].flagged ?
-                                    textures.findRegion("cell_normal_up") :
-                                    textures.findRegion("cell_flag_up");
+                    board[(int) pressingCell.x][(int) pressingCell.y].texture =
+                            !board[(int) pressingCell.x][(int) pressingCell.y].flagged ?
+                                    cellTextures.findRegion("cell_normal_up") :
+                                    cellTextures.findRegion("cell_flag_up");
                 }
             }
         }

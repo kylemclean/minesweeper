@@ -55,7 +55,8 @@ public class Minesweeper extends Game {
 	 * Loads all game assets.
 	 */
 	private void loadAssets() {
-		assets.load("textures/pack.atlas", TextureAtlas.class);
+		assets.load("textures/cells/pack.atlas", TextureAtlas.class);
+		assets.load("textures/ui/pack.atlas", TextureAtlas.class);
 		assets.load("ui/uiskin.json", Skin.class);
 		assets.load("ui/arial-32.fnt", BitmapFont.class);
 	}
