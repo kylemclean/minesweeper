@@ -45,7 +45,7 @@ public class GameScreen implements Screen, InputProcessor {
     private int cellSize = 40;
     private int boardHeight;
     private int boardWidth;
-    private Rectangle boardRectangle, zoomRectangle;
+    private Rectangle boardWorldRectangle, zoomRectangle;
     private int mines;
     private Cell[][] board;
     private Vector2 pressingCell;
@@ -56,7 +56,8 @@ public class GameScreen implements Screen, InputProcessor {
     private GameState gameStateBeforePause;
     private float gameTime;
 
-    private GlyphLayout minesDisplay, timeDisplay;
+    private GlyphLayout minesLayout, timeLayout;
+    private Vector2 minesDisplayPosition, timeDisplayPosition;
 
     /**
      * Initialize the GameScreen.
@@ -73,6 +74,7 @@ public class GameScreen implements Screen, InputProcessor {
         fixedCamera = this.game.fixedCamera;
         shapeRenderer = this.game.shapeRenderer;
 
+        // Get assets from game AssetManager.
         cellTextures = game.assets.get("textures/cells/pack.atlas", TextureAtlas.class);
         uiTextures = game.assets.get("textures/ui/pack.atlas", TextureAtlas.class);
         font = game.assets.get("ui/arial-32.fnt", BitmapFont.class);
@@ -93,7 +95,7 @@ public class GameScreen implements Screen, InputProcessor {
         cellsFlagged = 0;
         cellsOpened = 0;
 
-        boardRectangle = new Rectangle(0, 0, boardWidth * cellSize, boardHeight * cellSize);
+        boardWorldRectangle = new Rectangle(0, 0, boardWidth * cellSize, boardHeight * cellSize);
         zoomRectangle = new Rectangle(0, 0, boardWidth * cellSize, boardHeight * cellSize);
         // Set rectangle to 16:9 aspect ratio.
         if (zoomRectangle.getAspectRatio() >= (16F / 9F)) {
@@ -110,19 +112,19 @@ public class GameScreen implements Screen, InputProcessor {
         gameCameraTargetPosition.set(boardWidth * cellSize / 2, boardHeight * cellSize / 2, 0);
         // Have the camera snap to the target position at first
         gameCamera.position.set(gameCameraTargetPosition.cpy());
-        fixedCamera.position.set(gameCamera.position.cpy());
+        //fixedCamera.position.set(gameCamera.position.cpy());
         // Zoom in at first
         gameCamera.zoom = 0.5f;
         gameCameraTargetZoom = zoomRectangle.width / 1280;
         defaultZoom = gameCameraTargetZoom;
-        fixedCamera.zoom = defaultZoom;
 
         gameState = GameState.NOT_STARTED;
         gameTime = 0;
 
-        // Set to null to ensure it will not be read before text is rendered for the first time.
-        minesDisplay = null;
-        timeDisplay = null;
+        minesLayout = new GlyphLayout();
+        timeLayout = new GlyphLayout();
+        minesDisplayPosition = new Vector2(24, 720 - 24);
+        timeDisplayPosition = new Vector2(1280 - 24, 720 - 24);
     }
 
     /**
@@ -305,44 +307,40 @@ public class GameScreen implements Screen, InputProcessor {
         batch.end();
 
         // Draw rectangles behind the mines counter and timer
-        if (minesDisplay != null && timeDisplay != null) {
-            Gdx.gl20.glEnable(GL20.GL_BLEND);
-            shapeRenderer.setProjectionMatrix(fixedCamera.combined);
-            shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-            shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.75f);
-            shapeRenderer.rect( boardRectangle.x,
-                                boardRectangle.y + boardRectangle.height + 12,
-                                -minesDisplay.width - 8, -minesDisplay.height - 24);
-            shapeRenderer.rect( boardRectangle.x + boardRectangle.width,
-                                boardRectangle.y + boardRectangle.height + 12,
-                                minesDisplay.width + 12, -minesDisplay.height - 24);
-            shapeRenderer.end();
-            Gdx.gl20.glDisable(GL20.GL_BLEND);
-        }
+        Gdx.gl20.glEnable(GL20.GL_BLEND);
+        shapeRenderer.setProjectionMatrix(fixedCamera.combined);
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.75f);
+        shapeRenderer.rect( minesDisplayPosition.x - 8, minesDisplayPosition.y + 8,
+                            minesLayout.width + 8*2, -minesLayout.height - 8*2);
+        shapeRenderer.rect( timeDisplayPosition.x + 8, timeDisplayPosition.y + 8,
+                            -timeLayout.width - 8*2, -timeLayout.height - 8*2);
+        shapeRenderer.end();
+        Gdx.gl20.glDisable(GL20.GL_BLEND);
 
         batch.setProjectionMatrix(fixedCamera.combined);
         batch.begin();
         // Draw mines remaining
-        minesDisplay = font.draw(batch,
-                ((mines - cellsFlagged) < 100 ? "0" : "") +
-                        ((mines - cellsFlagged) < 10 ? "0" : "") + (mines - cellsFlagged),
-                boardRectangle.x - 8, boardRectangle.y + boardRectangle.height,
-                0, Align.right, false);
+        minesLayout.setText(font,  ((mines - cellsFlagged) < 100 ? "0" : "") +
+                ((mines - cellsFlagged) < 10 ? "0" : "") + (mines - cellsFlagged));
+        font.draw(batch, minesLayout,
+                 minesDisplayPosition.x, minesDisplayPosition.y);
         // Draw time elapsed
-        timeDisplay = font.draw(batch,
-                (int) gameTime / 60 + ":" + ((int) gameTime % 60 < 10 ? "0" : "") + (int) gameTime % 60,
-                boardRectangle.x + boardRectangle.width + 8,
-                boardRectangle.y + boardRectangle.height);
+        timeLayout.setText(font, (int) gameTime / 60 + ":" + ((int) gameTime % 60 < 10 ? "0" : "") + (int) gameTime % 60);
+        font.draw(batch, timeLayout,
+        /* right aligned */timeDisplayPosition.x - timeLayout.width, timeDisplayPosition.y);
+
+
         // Draw title if game is over
         if (gameState == GameState.WON || gameState == GameState.LOST) {
             if (gameState == GameState.WON) {
                 batch.draw(uiTextures.findRegion("win"),
-                        boardRectangle.width / 2 - uiTextures.findRegion("win").originalWidth / 2,
-                        boardRectangle.height / 2 - uiTextures.findRegion("win").originalHeight / 2);
+                        1280 / 2 - uiTextures.findRegion("win").originalWidth / 2,
+                        720 / 2 - uiTextures.findRegion("win").originalHeight / 2);
             } else if (gameState == GameState.LOST) {
                 batch.draw(uiTextures.findRegion("lose"),
-                        boardRectangle.width / 2 - uiTextures.findRegion("lose").originalWidth / 2,
-                        boardRectangle.height / 2 - uiTextures.findRegion("lose").originalHeight / 2);
+                        1280 / 2 - uiTextures.findRegion("lose").originalWidth / 2,
+                        720 / 2 - uiTextures.findRegion("lose").originalHeight / 2);
             }
             for (int i = 0; i < 2; i++) {
                 if (i == 0) {
@@ -352,9 +350,10 @@ public class GameScreen implements Screen, InputProcessor {
                 }
                     font.draw(
                             batch, "Press SPACE to play again\nPress ESC to change settings",
-                            boardRectangle.width / 2 + i*-2, 120 + i*2, 0, Align.center, false);
+                            1280 / 2 + i*-2, 120 + i*2, 0, Align.center, false);
             }
         }
+
         batch.end();
     }
 
@@ -385,7 +384,7 @@ public class GameScreen implements Screen, InputProcessor {
         gameCamera.unproject(touchPos);
 
         if (gameState == GameState.PLAYING || gameState == GameState.NOT_STARTED) {
-            if (boardRectangle.contains(touchPos.x, touchPos.y)) {
+            if (boardWorldRectangle.contains(touchPos.x, touchPos.y)) {
                 int cellX = (int) touchPos.x / cellSize;
                 int cellY = (int) touchPos.y / cellSize;
 
@@ -451,8 +450,10 @@ public class GameScreen implements Screen, InputProcessor {
             gameCamera.translate((screenTouchDownPos.x - screenX) / 4f,
                     -(screenTouchDownPos.y - screenY) / 4f);
             gameCameraTargetPosition.set(gameCamera.position.cpy());
-            gameCameraTargetPosition.x = MathUtils.clamp(gameCameraTargetPosition.x, boardRectangle.x, boardRectangle.x + boardRectangle.width);
-            gameCameraTargetPosition.y = MathUtils.clamp(gameCameraTargetPosition.y, boardRectangle.y, boardRectangle.y + boardRectangle.height);
+            gameCameraTargetPosition.x = MathUtils.clamp(gameCameraTargetPosition.x,
+                    boardWorldRectangle.x, boardWorldRectangle.x + boardWorldRectangle.width);
+            gameCameraTargetPosition.y = MathUtils.clamp(gameCameraTargetPosition.y,
+                    boardWorldRectangle.y, boardWorldRectangle.y + boardWorldRectangle.height);
             screenTouchDownPos.set(screenX, screenY, 0);
             return true;
         }
