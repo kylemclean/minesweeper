@@ -5,7 +5,7 @@
 ---
 
 ## Description
-This is a clone of the Windows Store version of Minesweeper. The gameplay is the same as any other version of Minesweeper, and like the Windows Store version, there is support for zooming and panning the board. Some features are missing, like chording and presets for different game modes; however, custom board dimensions and the amount of mines can be set.
+This is a clone of the Windows Store version of Minesweeper. The gameplay is the same as any other version of Minesweeper, and like the Windows Store version, there is support for zooming and panning the board. Some features are missing, like chording.
 
 ![Screenshot of the game](screenshot.PNG)
 
