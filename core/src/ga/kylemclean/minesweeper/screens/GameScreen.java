@@ -198,8 +198,8 @@ public class GameScreen implements Screen, InputProcessor {
      */
     private void openCell(int x, int y) {
         if (!board[x][y].opened && !board[x][y].flagged) {
-            // If the cell is not a mine or flagged
-            if (board[x][y].open()) {
+            board[x][y].opened = true;
+            if (!board[x][y].isMine) {
                 if (board[x][y].surroundingMines > 0) {
                     board[x][y].texture = cellTextures
                             .findRegion("cell" + board[x][y].surroundingMines);

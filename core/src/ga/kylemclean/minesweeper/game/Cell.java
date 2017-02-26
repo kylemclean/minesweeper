@@ -14,14 +14,4 @@ public class Cell {
         this.texture = texture;
     }
 
-    /**
-     * Opens the cell.
-     * @return true if the cell is not a mine or flagged.
-     */
-    public boolean open() {
-        opened = true;
-
-        return !isMine && !flagged;
-    }
-
 }
