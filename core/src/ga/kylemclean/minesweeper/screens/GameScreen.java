@@ -49,6 +49,7 @@ public class GameScreen implements Screen, InputProcessor {
     private int mines;
     private Cell[][] board;
     private Vector2 pressingCell;
+    private Vector2 chordingCell;
     private int cellsFlagged;
     private int cellsOpened;
 
@@ -92,6 +93,7 @@ public class GameScreen implements Screen, InputProcessor {
         board = new Cell[this.boardWidth][this.boardHeight];
         createCells(this.boardWidth, this.boardHeight);
         pressingCell = new Vector2(-1, -1);
+        chordingCell = new Vector2(-1, -1);
         cellsFlagged = 0;
         cellsOpened = 0;
 
@@ -210,7 +212,7 @@ public class GameScreen implements Screen, InputProcessor {
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dx = -1; dx <= 1; dx++) {
                             if (x + dx >= 0 && y + dy >= 0 &&
-                                x + dx < boardWidth && y + dy < boardHeight) {
+                                    x + dx < boardWidth && y + dy < boardHeight) {
                                 openCell(x + dx, y + dy);
                             }
                         }
@@ -243,6 +245,47 @@ public class GameScreen implements Screen, InputProcessor {
                 board[x][y].flagged = false;
                 board[x][y].texture = cellTextures.findRegion("cell_normal_up");
                 cellsFlagged--;
+            }
+        }
+    }
+
+    /**
+     * Chord (open all cells in 3x3 box around) a given cell.
+     *
+     * @param cellX The x-coordinate of the cell to chord.
+     * @param cellY The y-coordinate of the cell to chord.
+     */
+    private void chordCell(int cellX, int cellY) {
+        int surroundingFlags = 0;
+        int surroundingMines = board[cellX][cellY].surroundingMines;
+        for (int dy = -1; dy < 2; dy++) {
+            for (int dx = -1; dx < 2; dx++) {
+                if (!(dx == 0 && dy == 0)) { // Don't check the chording cell
+                    // Make sure the cell we are checking is on the board
+                    if (cellX + dx >= 0 && cellY + dy >= 0 &&
+                        cellX + dx < boardWidth && cellY + dy < boardHeight) {
+                        if (board[cellX + dx][cellY + dy].flagged) {
+                            surroundingFlags++;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // If there are the right amount of flags, open the surrounding cells
+        if (surroundingFlags == surroundingMines) {
+            for (int dy = -1; dy < 2; dy++) {
+                for (int dx = -1; dx < 2; dx++) {
+                    if (!(dx == 0 && dy == 0)) { // Don't check the chording cell
+                        // Make sure the cell we are checking is on the board
+                        if (cellX + dx >= 0 && cellY + dy >= 0 &&
+                                cellX + dx < boardWidth && cellY + dy < boardHeight) {
+                            if (!board[cellX + dx][cellY + dy].flagged) {
+                                openCell(cellX + dx, cellY + dy);
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -311,20 +354,20 @@ public class GameScreen implements Screen, InputProcessor {
         shapeRenderer.setProjectionMatrix(fixedCamera.combined);
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
         shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.75f);
-        shapeRenderer.rect( minesDisplayPosition.x - 8, minesDisplayPosition.y + 8,
-                            minesLayout.width + 8*2, -minesLayout.height - 8*2);
-        shapeRenderer.rect( timeDisplayPosition.x + 8, timeDisplayPosition.y + 8,
-                            -timeLayout.width - 8*2, -timeLayout.height - 8*2);
+        shapeRenderer.rect(minesDisplayPosition.x - 8, minesDisplayPosition.y + 8,
+                minesLayout.width + 8 * 2, -minesLayout.height - 8 * 2);
+        shapeRenderer.rect(timeDisplayPosition.x + 8, timeDisplayPosition.y + 8,
+                -timeLayout.width - 8 * 2, -timeLayout.height - 8 * 2);
         shapeRenderer.end();
         Gdx.gl20.glDisable(GL20.GL_BLEND);
 
         batch.setProjectionMatrix(fixedCamera.combined);
         batch.begin();
         // Draw mines remaining
-        minesLayout.setText(font,  ((mines - cellsFlagged) < 100 ? "0" : "") +
+        minesLayout.setText(font, ((mines - cellsFlagged) < 100 ? "0" : "") +
                 ((mines - cellsFlagged) < 10 ? "0" : "") + (mines - cellsFlagged));
         font.draw(batch, minesLayout,
-                 minesDisplayPosition.x, minesDisplayPosition.y);
+                minesDisplayPosition.x, minesDisplayPosition.y);
         // Draw time elapsed
         timeLayout.setText(font, (int) gameTime / 60 + ":" + ((int) gameTime % 60 < 10 ? "0" : "") + (int) gameTime % 60);
         font.draw(batch, timeLayout,
@@ -348,9 +391,9 @@ public class GameScreen implements Screen, InputProcessor {
                 } else {
                     font.setColor(Color.WHITE);
                 }
-                    font.draw(
-                            batch, "Press SPACE to play again\nPress ESC to change settings",
-                            1280 / 2 + i*-2, 120 + i*2, 0, Align.center, false);
+                font.draw(
+                        batch, "Press SPACE to play again\nPress ESC to change settings",
+                        1280 / 2 + i * -2, 120 + i * 2, 0, Align.center, false);
             }
         }
 
@@ -388,55 +431,89 @@ public class GameScreen implements Screen, InputProcessor {
                 int cellX = (int) touchPos.x / cellSize;
                 int cellY = (int) touchPos.y / cellSize;
 
-                if (!board[cellX][cellY].opened) {
-                    pressingCell.set(cellX, cellY);
-                    if (!board[cellX][cellY].flagged) {
-                        board[cellX][cellY].texture = cellTextures.findRegion("cell_normal_down");
+                // Make sure that the cell coordinates are on the board
+                if ((cellX >= 0 && cellX <= boardWidth) && (cellY >= 0 && cellY <= boardHeight)) {
+
+                    if (!board[cellX][cellY].opened) {
+                        // Cell is not yet open
+                        pressingCell.set(cellX, cellY);
+                        if (!board[cellX][cellY].flagged) {
+                            board[cellX][cellY].texture = cellTextures.findRegion("cell_normal_down");
+                        } else {
+                            board[cellX][cellY].texture = cellTextures.findRegion("cell_flag_down");
+                        }
                     } else {
-                        board[cellX][cellY].texture = cellTextures.findRegion("cell_flag_down");
+                        // Cell is already open
+                        chordingCell.set(cellX, cellY);
                     }
                 }
+
                 return true;
             }
         }
         return false;
+
     }
 
     @Override
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
         boolean returnTrue = false;
+
+        // Set touchPos to world coordinates of touchUp position
         touchPos.set(screenX, screenY, 0);
         gameCamera.unproject(touchPos);
 
         if (gameState == GameState.PLAYING || gameState == GameState.NOT_STARTED) {
+            // cellX and cellY represent the boards coordinates of the touched cell
             int cellX = (int) touchPos.x / cellSize;
             int cellY = (int) touchPos.y / cellSize;
-            if (cellX == pressingCell.x && cellY == pressingCell.y && !panningCamera) {
-                if (button == 0) {
-                    if (gameState == GameState.NOT_STARTED) {
-                        generateMines(this.mines, cellX, cellY);
-                        generateCellLabels();
-                        gameState = GameState.PLAYING;
-                    }
-                    if (!board[cellX][cellY].flagged) {
-                        openCell(cellX, cellY);
-                    } else {
-                        board[cellX][cellY].texture = cellTextures.findRegion("cell_flag_up");
-                    }
-                } else if (button == 1) {
-                    toggleFlagCell(cellX, cellY);
-                }
-                returnTrue = true;
-            } else {
+
+            // Make sure the cell position is on the board
+            if ((cellX >= 0 && cellX < boardWidth) && (cellY >= 0 && cellY < boardHeight)) {
+
+                // Pressing cell logic
                 if (pressingCell.x != -1 && pressingCell.y != -1) {
-                    board[(int) pressingCell.x][(int) pressingCell.y].texture =
-                            !board[(int) pressingCell.x][(int) pressingCell.y].flagged ?
-                                    cellTextures.findRegion("cell_normal_up") :
-                                    cellTextures.findRegion("cell_flag_up");
+                    if (cellX == pressingCell.x && cellY == pressingCell.y && !panningCamera) {
+                        if (button == 0) {
+                            if (gameState == GameState.NOT_STARTED) {
+                                generateMines(this.mines, cellX, cellY);
+                                generateCellLabels();
+                                gameState = GameState.PLAYING;
+                            }
+                            if (!board[cellX][cellY].flagged) {
+                                openCell(cellX, cellY);
+                            } else {
+                                board[cellX][cellY].texture = cellTextures.findRegion("cell_flag_up");
+                            }
+                        } else if (button == 1) {
+                            toggleFlagCell(cellX, cellY);
+                        }
+                        returnTrue = true;
+                    } else {
+                        // Dragged off the cell
+                        if (pressingCell.x != -1 && pressingCell.y != -1) {
+                            board[(int) pressingCell.x][(int) pressingCell.y].texture =
+                                    !board[(int) pressingCell.x][(int) pressingCell.y].flagged ?
+                                            cellTextures.findRegion("cell_normal_up") :
+                                            cellTextures.findRegion("cell_flag_up");
+                        }
+                    }
                 }
+
+                // Chording cell logic
+                if (chordingCell.x != -1 && chordingCell.y != -1) {
+                    if (cellX == chordingCell.x && cellY == chordingCell.y && !panningCamera) {
+                        chordCell(cellX, cellY);
+                    } else {
+                        // Dragged off cell
+                    }
+                }
+
             }
+
         }
         pressingCell.set(-1, -1);
+        chordingCell.set(-1, -1);
         panningCamera = false;
         return returnTrue;
     }
