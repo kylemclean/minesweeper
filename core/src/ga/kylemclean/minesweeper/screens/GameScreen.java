@@ -320,6 +320,8 @@ public class GameScreen implements Screen, InputProcessor {
      */
     private void resetGame() {
         createCells(boardWidth, boardHeight);
+        pressingCell.set(-1, -1);
+        chordingCell.set(-1, -1);
         cellsFlagged = 0;
         cellsOpened = 0;
         gameState = GameState.NOT_STARTED;
