@@ -92,8 +92,8 @@ public class GameScreen implements Screen, InputProcessor {
 
         board = new Cell[this.boardWidth][this.boardHeight];
         createCells(this.boardWidth, this.boardHeight);
-        pressingCell = new Vector2(-1, -1);
-        chordingCell = new Vector2(-1, -1);
+        pressingCell = null;
+        chordingCell = null;
         cellsFlagged = 0;
         cellsOpened = 0;
 
@@ -271,7 +271,7 @@ public class GameScreen implements Screen, InputProcessor {
                 }
             }
         }
-        
+
         // If there are the right amount of flags, open the surrounding cells
         if (surroundingFlags == surroundingMines) {
             for (int dy = -1; dy < 2; dy++) {
@@ -320,12 +320,12 @@ public class GameScreen implements Screen, InputProcessor {
      */
     private void resetGame() {
         createCells(boardWidth, boardHeight);
-        pressingCell.set(-1, -1);
-        chordingCell.set(-1, -1);
         cellsFlagged = 0;
         cellsOpened = 0;
         gameState = GameState.NOT_STARTED;
         gameTime = 0;
+        pressingCell = null;
+        chordingCell = null;
     }
 
     @Override
@@ -438,7 +438,7 @@ public class GameScreen implements Screen, InputProcessor {
 
                     if (!board[cellX][cellY].opened) {
                         // Cell is not yet open
-                        pressingCell.set(cellX, cellY);
+                        pressingCell = new Vector2(cellX, cellY);
                         if (!board[cellX][cellY].flagged) {
                             board[cellX][cellY].texture = cellTextures.findRegion("cell_normal_down");
                         } else {
@@ -446,7 +446,7 @@ public class GameScreen implements Screen, InputProcessor {
                         }
                     } else {
                         // Cell is already open
-                        chordingCell.set(cellX, cellY);
+                        chordingCell = new Vector2(cellX, cellY);
                     }
                 }
 
@@ -474,7 +474,7 @@ public class GameScreen implements Screen, InputProcessor {
             if ((cellX >= 0 && cellX < boardWidth) && (cellY >= 0 && cellY < boardHeight)) {
 
                 // Pressing cell logic
-                if (pressingCell.x != -1 && pressingCell.y != -1) {
+                if (pressingCell != null) {
                     if (cellX == pressingCell.x && cellY == pressingCell.y && !panningCamera) {
                         if (button == 0) {
                             if (gameState == GameState.NOT_STARTED) {
@@ -493,17 +493,15 @@ public class GameScreen implements Screen, InputProcessor {
                         returnTrue = true;
                     } else {
                         // Dragged off the cell
-                        if (pressingCell.x != -1 && pressingCell.y != -1) {
-                            board[(int) pressingCell.x][(int) pressingCell.y].texture =
-                                    !board[(int) pressingCell.x][(int) pressingCell.y].flagged ?
-                                            cellTextures.findRegion("cell_normal_up") :
-                                            cellTextures.findRegion("cell_flag_up");
-                        }
+                        board[(int) pressingCell.x][(int) pressingCell.y].texture =
+                                !board[(int) pressingCell.x][(int) pressingCell.y].flagged ?
+                                        cellTextures.findRegion("cell_normal_up") :
+                                        cellTextures.findRegion("cell_flag_up");
                     }
                 }
 
                 // Chording cell logic
-                if (chordingCell.x != -1 && chordingCell.y != -1) {
+                if (chordingCell != null && gameState == GameState.PLAYING) {
                     if (cellX == chordingCell.x && cellY == chordingCell.y && !panningCamera) {
                         chordCell(cellX, cellY);
                     } else {
@@ -514,8 +512,8 @@ public class GameScreen implements Screen, InputProcessor {
             }
 
         }
-        pressingCell.set(-1, -1);
-        chordingCell.set(-1, -1);
+        pressingCell = null;
+        chordingCell = null;
         panningCamera = false;
         return returnTrue;
     }
